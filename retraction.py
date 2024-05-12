@@ -1,22 +1,4 @@
-# 1. Analyze Trends in Retractions Over Time:
 
-# Look for a column indicating the publication or retraction date. You can use this to:
-# Calculate the yearly retraction rate (number of retractions per year divided by the total number of publications in that year).
-# Plot a time series graph to visualize how retraction rates have changed over time.
-# 2. Analyze Retractions by Publication Type:
-
-# Identify a column categorizing the type of publication (e.g., journal article, conference proceeding, book chapter).
-# Calculate retraction rates for different publication types and compare them.
-# 3. Analyze Retractions by Reason:
-
-# Look for a column describing the reason for retraction (if available).
-# Identify the most frequent reasons for retractions (e.g., misconduct, honest errors).
-# You can visualize this using bar charts or pie charts.
-# 4. Analyze Retractions by Country:
-
-# If a country of origin is included for the corresponding authors, you can group retractions by country and calculate retraction rates.
-# Analyze if there are any geographical trends in retraction rates.
-# 5. Analyze Retractions by Author Affiliation:
 
 # If author affiliation information is available (e.g., university, institution), you can group retractions by affiliation and calculate retraction rates.
 # This might reveal potential biases or areas needing improvement within specific institutions.
@@ -24,9 +6,22 @@
 
 # You can explore relationships between retraction reasons and other factors like publication type, journal impact factor (if available), or the number of authors.
 # Use techniques like correlation analysis or statistical tests to see if there are significant associations.
+
+# Regression: Regression models can be used to predict numerical outcomes, such as the number of retractions or the time until the next retraction. For example, you could use linear regression to predict the number of retractions based on various predictor variables, such as publication year, journal impact factor, author reputation, etc.
+
+# Clustering: Clustering algorithms can help identify groups or clusters of publications with similar characteristics. This can be useful for identifying patterns or trends in retraction data. For example, you could use k-means clustering to group publications based on features such as publication type, research methodology, or citation count. This could reveal common characteristics among retractions and potentially uncover underlying reasons for retractions.
+
+# Classification: Classification algorithms can be used to predict categorical outcomes, such as whether a publication is likely to be retracted or not. For example, you could train a binary classification model (e.g., logistic regression, decision tree, random forest) using features such as author reputation, journal impact factor, citation count, etc., to classify publications as either high-risk (likely to be retracted) or low-risk (unlikely to be retracted).
+
+
 import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import MultiLabelBinarizer
 
 def visualize_article_types_distribution_yearwise(data):
     # Split ArticleType column by semicolon and explode into separate rows
@@ -129,15 +124,61 @@ def analyze_retractions_by_country(data):
     except KeyError as e:
         print("Error:", e)
 
+def perform_linear_regression(data):
+    # Split ArticleType column by semicolon and explode into separate rows
+    data['article_types'] = data['ArticleType'].str.split(';')
+    data = data.explode('article_types')
+
+    # Parse RetractionDate column with multiple date formats
+    data['RetractionDate'] = pd.to_datetime(data['RetractionDate'], errors='coerce')
+
+    # Extract year from RetractionDate
+    data['year'] = data['RetractionDate'].dt.year
+
+    # Drop rows with NaN in year (missing or incorrect RetractionDate)
+    data = data.dropna(subset=['year'])
+
+    # Combine reasons and article types into a single column for encoding
+    data['features'] = data['Reason'] + ';' + data['article_types']
+
+    # Initialize MultiLabelBinarizer for one-hot encoding
+    mlb = MultiLabelBinarizer()
+
+    # One-hot encode the combined features
+    features_encoded = pd.DataFrame(mlb.fit_transform(data['features'].str.split(';')),
+                                    columns=mlb.classes_,
+                                    index=data.index)
+
+    # Concatenate encoded features with retraction year
+    X = pd.concat([features_encoded, data['year']], axis=1)
+    y = data['year']  # Target variable is the retraction year
+
+    # Split the dataset into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize and fit a linear regression model
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    mse = model.score(X_test, y_test)
+    print('Mean Squared Error:', mse)
+
+    # Print the coefficients of the regression model
+    print('Coefficients:', model.coef_)
+
 
 # Load the data from a CSV file
 data = pd.read_csv("../retractions35215.csv")
 
 # Call the function to visualize article types distribution over time
-visualize_article_types_distribution_yearwise(data)
+# visualize_article_types_distribution_yearwise(data)
 
 # Analyze retractions by reason
-analyze_retractions_by_reason(data)
+# analyze_retractions_by_reason(data)
 
 # Analyze retractions by country
-analyze_retractions_by_country(data)
+# analyze_retractions_by_country(data)
+
+# Call the function with your dataset
+perform_linear_regression(data)
