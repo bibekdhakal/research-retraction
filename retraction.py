@@ -134,10 +134,10 @@ def analyze_retractions_by_country(data):
 data = pd.read_csv("../retractions35215.csv")
 
 # Call the function to visualize article types distribution over time
-# visualize_article_types_distribution_yearwise(data)
+visualize_article_types_distribution_yearwise(data)
 
 # Analyze retractions by reason
-# analyze_retractions_by_reason(data)
+analyze_retractions_by_reason(data)
 
 # Analyze retractions by country
 analyze_retractions_by_country(data)
