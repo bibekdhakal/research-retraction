@@ -54,6 +54,50 @@ def visualize_article_types_distribution_yearwise(data):
     plt.tight_layout()
     plt.show()
 
+def analyze_retractions_by_reason(data):
+    # Check if there is a column describing the reason for retraction
+    if 'Reason' not in data.columns:
+        print("Error: Reason for retraction column not found.")
+        return
+
+    # Count the frequency of each reason for retraction
+    reason_counts = data['Reason'].str.split(';').explode().str.strip().dropna().value_counts()
+
+    # Identify the most frequent reasons 
+    most_frequent_reasons = reason_counts.head(15)
+
+    # Plot a pie chart to visualize the distribution of reasons
+    plt.figure(figsize=(8, 8))
+    plt.pie(most_frequent_reasons, labels=most_frequent_reasons.index, autopct='%1.1f%%', startangle=140)
+    plt.title('Distribution of Retractions by Reason')
+    plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.tight_layout()
+
+    # Show legends by color
+    plt.legend(loc="upper right", bbox_to_anchor=(1, 0, 0.5, 1), title="Reasons", fontsize='small', fancybox=True, shadow=True)
+    plt.show()
+
+def analyze_retractions_by_country(data):
+    # Check if there is a column describing the country for each retraction
+    if 'Country' not in data.columns:
+        print("Error: Country column not found.")
+        return
+
+    # Count the number of retractions for each country
+    country_counts = data['Country'].str.split(';').explode().str.strip().dropna().value_counts()
+    # Select the top 10 countries
+    top_countries = country_counts.head(10)
+
+    # Plot a pie chart to visualize the distribution of retractions by country
+    plt.figure(figsize=(8, 8))
+    plt.pie(top_countries, labels=top_countries.index, autopct='%1.1f%%', startangle=140)
+    plt.title('Distribution of Retractions by Country')
+    plt.axis('equal')  # Equal aspect ratio ensures thats pie is drawn as a circle.
+    plt.tight_layout()
+
+    # Show legends by color
+    plt.legend(loc="upper right", bbox_to_anchor=(1, 0, 0.5, 1), title="Countries", fontsize='small', fancybox=True, shadow=True)
+    plt.show()
 
 # Load the data from a CSV file
 data = pd.read_csv("../retractions35215.csv")
@@ -61,3 +105,8 @@ data = pd.read_csv("../retractions35215.csv")
 # Call the function to visualize article types distribution over time
 visualize_article_types_distribution_yearwise(data)
 
+# Analyze retractions by reason
+analyze_retractions_by_reason(data)
+
+# Analyze retractions by country
+analyze_retractions_by_country(data)
