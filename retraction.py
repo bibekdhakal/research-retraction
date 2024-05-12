@@ -25,6 +25,7 @@
 # You can explore relationships between retraction reasons and other factors like publication type, journal impact factor (if available), or the number of authors.
 # Use techniques like correlation analysis or statistical tests to see if there are significant associations.
 import pandas as pd
+import geopandas as gpd
 import matplotlib.pyplot as plt
 
 def visualize_article_types_distribution_yearwise(data):
@@ -78,35 +79,65 @@ def analyze_retractions_by_reason(data):
     plt.show()
 
 def analyze_retractions_by_country(data):
-    # Check if there is a column describing the country for each retraction
-    if 'Country' not in data.columns:
-        print("Error: Country column not found.")
-        return
+    try:
+        # Check if there is a column describing the country for each retraction
+        if 'Country' not in data.columns:
+            raise KeyError("Country column not found in the DataFrame.")
 
-    # Count the number of retractions for each country
-    country_counts = data['Country'].str.split(';').explode().str.strip().dropna().value_counts()
-    # Select the top 10 countries
-    top_countries = country_counts.head(10)
+        # Split entries containing multiple countries and exclude 'Unknown' countries
+        data['Country'] = data['Country'].str.replace(',', ';')  # Replace commas with semicolons
+        data['Country'] = data['Country'].str.split(';').apply(lambda x: [c.strip() for c in x if c.strip() != 'Unknown'])
+        data = data.explode('Country')
+        
+        # Print the first few rows of the 'Country' column after manipulation
+        print("\nAfter splitting and exploding:")
+        print(data['Country'].head())
 
-    # Plot a pie chart to visualize the distribution of retractions by country
-    plt.figure(figsize=(8, 8))
-    plt.pie(top_countries, labels=top_countries.index, autopct='%1.1f%%', startangle=140)
-    plt.title('Distribution of Retractions by Country')
-    plt.axis('equal')  # Equal aspect ratio ensures thats pie is drawn as a circle.
-    plt.tight_layout()
+        # Count the number of retractions for each country
+        country_counts = data['Country'].value_counts()
+        print(country_counts)
+        # Select the top 10 countries
+        top_countries = country_counts.head(10)
 
-    # Show legends by color
-    plt.legend(loc="upper right", bbox_to_anchor=(1, 0, 0.5, 1), title="Countries", fontsize='small', fancybox=True, shadow=True)
-    plt.show()
+        # Plot a pie chart to visualize the distribution of retractions by country
+        plt.figure(figsize=(8, 8))
+        plt.pie(top_countries, labels=top_countries.index, autopct='%1.1f%%', startangle=140)
+        plt.title('Distribution of Retractions by Country')
+        plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        plt.tight_layout()
+        plt.show()
+
+        # Load the world shapefile
+        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+        
+        # Print the data types of the columns in the world shapefile
+        print("COlumns:\n",world.columns)
+        print('Country\n',country_counts.index)
+
+        # Merge country counts with world shapefile
+        world = world.merge(country_counts, left_on='name', right_index=True)
+        print('Merged data\n',world)
+        print('Count word: ',world['count'].dtype)
+
+
+        # Plot the map
+        fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+        world.plot(column='count', cmap='Blues', linewidth=0.8, ax=ax, edgecolor='0.8', legend=True)
+        ax.set_title('Retractions by Country')
+        plt.show()
+
+    except KeyError as e:
+        print("Error:", e)
+
 
 # Load the data from a CSV file
 data = pd.read_csv("../retractions35215.csv")
 
 # Call the function to visualize article types distribution over time
-visualize_article_types_distribution_yearwise(data)
+# visualize_article_types_distribution_yearwise(data)
 
 # Analyze retractions by reason
-analyze_retractions_by_reason(data)
+# analyze_retractions_by_reason(data)
 
 # Analyze retractions by country
 analyze_retractions_by_country(data)
